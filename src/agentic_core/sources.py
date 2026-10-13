@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Source gate: decide which retrieved chunks may reach the model, before it is called.
 
 Grounding checks that an answer is faithful to its source; it cannot tell a true source from a poisoned one.

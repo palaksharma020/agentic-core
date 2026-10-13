@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Grounding: does each claim's evidence quote appear in the context the model was actually shown?
 
 Validate against the prompt, not the corpus. The application (not the model) records which chunks went into

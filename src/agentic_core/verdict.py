@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Verdict: combine the source gate and grounding into one label for the answer, deterministically.
 
     VERIFIED     every delivered claim is grounded in allowed sources and corroboration is met

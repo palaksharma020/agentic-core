@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 import hashlib
 
 from agentic_core import Claim, DropReason, Evidence, validate_grounding

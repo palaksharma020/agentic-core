@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 import pytest
 
 from agentic_core import cap_new_severity, tighten_severity

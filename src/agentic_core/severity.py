@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Limited authority for model-proposed severities: the model may propose, never promote.
 
 "Tighten-only" (raise, never lower) stops a model hiding risk, but on its own it lets a model inflate risk on a

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """agentic-core: small, framework-agnostic utilities for building agents you can check.
 
 No LLM calls and no dependencies: plain dataclasses and deterministic checks around a model's output.

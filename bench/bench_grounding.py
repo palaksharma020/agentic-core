@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Time validate_grounding per claim.
 
     python bench/bench_grounding.py [n_chunks] [n_claims]

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Validate a RAG answer with agentic-core: a trusted source and an untrusted one.
 
     python examples/rag_answer.py

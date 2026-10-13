@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Text helpers for handling model output safely.
 
 - normalize(): the comparison form used for grounding (quotes, whitespace, case)

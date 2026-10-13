@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """The example the blog walks through must keep working."""
 
 import importlib.util
