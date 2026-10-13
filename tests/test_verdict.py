@@ -1,4 +1,12 @@
-from agentic_core import Claim, Evidence, SourceCheck, Verdict, decide, downgrade_only, validate_grounding
+from agentic_core import (
+    Claim,
+    Evidence,
+    SourceCheck,
+    Verdict,
+    decide,
+    downgrade_only,
+    validate_grounding,
+)
 
 
 def gate(allowed, origins=None, needed=1):

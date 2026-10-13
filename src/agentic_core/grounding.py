@@ -14,6 +14,7 @@ import hashlib
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 from agentic_core.text import normalize
 
@@ -31,7 +32,7 @@ class Claim:
     id: str | None = None
 
     @classmethod
-    def from_dict(cls, d: Mapping) -> Claim:
+    def from_dict(cls, d: Mapping[str, Any]) -> Claim:
         """Build a Claim from parsed model JSON, tolerating missing or mistyped fields.
 
         Accepts {"text"|"claim": ..., "id": ..., "evidence": [{"source_id"|"source"|"file": ..., "quote": ...}]}.
@@ -103,7 +104,7 @@ def _chunks(value: str | Sequence[str]) -> list[str]:
 
 
 def validate_grounding(
-    claims: Iterable[Claim | Mapping],
+    claims: Iterable[Claim | Mapping[str, Any]],
     shown_context: Mapping[str, str | Sequence[str]],
     *,
     sources: Mapping[str, str] | None = None,

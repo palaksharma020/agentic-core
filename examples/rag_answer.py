@@ -12,8 +12,20 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
 from agentic_core import (
-    Claim, Decision, SourcePolicy, SourceRecord, ValidationResult, Verdict, check_sources, decide, normalize,
-    parse_json_object, render_untrusted, sanitize_llm_text, sha256_text, validate_grounding,
+    Claim,
+    Decision,
+    SourcePolicy,
+    SourceRecord,
+    ValidationResult,
+    Verdict,
+    check_sources,
+    decide,
+    normalize,
+    parse_json_object,
+    render_untrusted,
+    sanitize_llm_text,
+    sha256_text,
+    validate_grounding,
 )
 
 NOW = datetime(2026, 10, 9, 9, 0, tzinfo=timezone.utc)

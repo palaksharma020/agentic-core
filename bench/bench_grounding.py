@@ -13,8 +13,7 @@ import time
 
 from agentic_core import Claim, Evidence, validate_grounding
 
-WORDS = ("model access policy approval transfer balance limit owner review ticket wiki record signed "
-         "ingest retrieval chunk source tier fresh stale hash audit claim quote answer").split()
+WORDS = ["model", "access", "policy", "approval", "transfer", "balance", "limit", "owner", "review", "ticket", "wiki", "record", "signed", "ingest", "retrieval", "chunk", "source", "tier", "fresh", "stale", "hash", "audit", "claim", "quote", "answer"]
 
 
 def main(n_chunks: int = 20, n_claims: int = 200, repeats: int = 50) -> None:

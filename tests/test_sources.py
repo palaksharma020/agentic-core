@@ -1,6 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
-from agentic_core import SourcePolicy, SourceRecord, SourceRejection, check_sources, render_untrusted, sha256_text
+from agentic_core import (
+    SourcePolicy,
+    SourceRecord,
+    SourceRejection,
+    check_sources,
+    render_untrusted,
+    sha256_text,
+)
 
 NOW = datetime(2026, 10, 9, tzinfo=timezone.utc)
 POLICY = SourcePolicy(max_tier={"finance": 1, "how_to": 3}, ttl={1: timedelta(days=7)}, corroborate={"finance": 2})
