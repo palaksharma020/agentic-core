@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-core"
+version = "0.1.0"
+description = "Small, framework-agnostic utilities for building agents you can check: grounding, source gates, verdicts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = []
+keywords = ["llm", "agents", "rag", "grounding", "validation", "ai-security"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentic_core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
