@@ -2,6 +2,7 @@
 
 No LLM calls and no dependencies: plain dataclasses and deterministic checks around a model's output.
 """
+
 from agentic_core.grounding import (
     Claim,
     DroppedClaim,

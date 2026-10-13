@@ -4,6 +4,7 @@
 - sanitize_llm_text(): strip links, images, bare URLs and HTML from model-written text before it is rendered
 - parse_json_object(): extract one JSON object from model output, or raise so the caller can fail closed
 """
+
 from __future__ import annotations
 
 import json

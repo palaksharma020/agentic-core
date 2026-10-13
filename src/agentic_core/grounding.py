@@ -8,6 +8,7 @@ What this proves: the quote is faithful to text the model was given.
 What it does not prove: that the claim follows from the quote, or that the source is true. Those need
 entailment checks or human review, and source controls (see agentic_core.sources).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -40,18 +41,26 @@ class Claim:
         ev = d.get("evidence") or []
         return cls(
             text=str(d.get("text", d.get("claim", ""))),
-            evidence=[Evidence(str(e.get("source_id", e.get("source", e.get("file", "")))), str(e.get("quote", "")))
-                      for e in (ev if isinstance(ev, list) else []) if isinstance(e, Mapping)],
+            evidence=[
+                Evidence(
+                    str(e.get("source_id", e.get("source", e.get("file", "")))),
+                    str(e.get("quote", "")),
+                )
+                for e in (ev if isinstance(ev, list) else [])
+                if isinstance(e, Mapping)
+            ],
             id=None if d.get("id") is None else str(d.get("id")),
         )
 
 
 class DropReason(str, Enum):
-    NO_EVIDENCE = "no_evidence"          # no quotes, or every quote shorter than min_quote_chars
-    UNKNOWN_SOURCE = "unknown_source"    # cites a source_id that was neither shown nor known
-    NOT_SHOWN = "not_shown"              # quote not in the shown context (pass sources= to say why)
-    NOT_IN_SOURCE = "not_in_source"      # quote is not in the source at all: invented
-    NOT_IN_PROMPT = "not_in_prompt"      # real text in the source, but not in the prompt: recalled or invented
+    NO_EVIDENCE = "no_evidence"  # no quotes, or every quote shorter than min_quote_chars
+    UNKNOWN_SOURCE = "unknown_source"  # cites a source_id that was neither shown nor known
+    NOT_SHOWN = "not_shown"  # quote not in the shown context (pass sources= to say why)
+    NOT_IN_SOURCE = "not_in_source"  # quote is not in the source at all: invented
+    NOT_IN_PROMPT = (
+        "not_in_prompt"  # real text in the source, but not in the prompt: recalled or invented
+    )
 
 
 _DETAIL = {
@@ -62,16 +71,21 @@ _DETAIL = {
     DropReason.NOT_IN_PROMPT: "quote is real text in the source but was not in the prompt (recalled or invented)",
 }
 # when a claim's quotes fail for different reasons, report the most informative one
-_PRIORITY = [DropReason.NOT_IN_PROMPT, DropReason.NOT_IN_SOURCE, DropReason.NOT_SHOWN,
-             DropReason.UNKNOWN_SOURCE, DropReason.NO_EVIDENCE]
+_PRIORITY = [
+    DropReason.NOT_IN_PROMPT,
+    DropReason.NOT_IN_SOURCE,
+    DropReason.NOT_SHOWN,
+    DropReason.UNKNOWN_SOURCE,
+    DropReason.NO_EVIDENCE,
+]
 
 
 @dataclass(frozen=True)
 class VerifiedEvidence:
     source_id: str
     quote: str
-    chunk_index: int       # which shown chunk of source_id contains the quote
-    chunk_sha256: str      # hash of that chunk as shown, for the audit record
+    chunk_index: int  # which shown chunk of source_id contains the quote
+    chunk_sha256: str  # hash of that chunk as shown, for the audit record
 
 
 @dataclass(frozen=True)
@@ -134,17 +148,28 @@ def validate_grounding(
             if len(q) < min_quote_chars:
                 bad.append((ev, DropReason.NO_EVIDENCE))
                 continue
-            hit = next((i for i, (nc, _) in enumerate(shown.get(ev.source_id, [])) if q in nc), None)
+            hit = next(
+                (i for i, (nc, _) in enumerate(shown.get(ev.source_id, [])) if q in nc), None
+            )
             if hit is not None:
                 chunk = shown[ev.source_id][hit][1]
-                good.append(VerifiedEvidence(ev.source_id, ev.quote, hit,
-                                             hashlib.sha256(chunk.encode()).hexdigest()))
+                good.append(
+                    VerifiedEvidence(
+                        ev.source_id, ev.quote, hit, hashlib.sha256(chunk.encode()).hexdigest()
+                    )
+                )
                 continue
             if sources is not None and ev.source_id in sources:
                 if ev.source_id not in norm_sources:
                     norm_sources[ev.source_id] = normalize(sources[ev.source_id])
-                bad.append((ev, DropReason.NOT_IN_PROMPT if q in norm_sources[ev.source_id]
-                            else DropReason.NOT_IN_SOURCE))
+                bad.append(
+                    (
+                        ev,
+                        DropReason.NOT_IN_PROMPT
+                        if q in norm_sources[ev.source_id]
+                        else DropReason.NOT_IN_SOURCE,
+                    )
+                )
             elif ev.source_id in shown:
                 bad.append((ev, DropReason.NOT_SHOWN))
             else:
@@ -153,6 +178,8 @@ def validate_grounding(
         if good and not (require_all_evidence and bad):
             res.kept.append(KeptClaim(claim, tuple(good), tuple(bad)))
         else:
-            reason = next((r for r in _PRIORITY if any(b == r for _, b in bad)), DropReason.NO_EVIDENCE)
+            reason = next(
+                (r for r in _PRIORITY if any(b == r for _, b in bad)), DropReason.NO_EVIDENCE
+            )
             res.dropped.append(DroppedClaim(claim, reason, _DETAIL[reason], tuple(bad)))
     return res

@@ -14,7 +14,7 @@ def test_tighten_only_cannot_lower_or_keep():
 
 
 def test_raise_limited_to_one_level_and_ceiling():
-    d = tighten_severity("info", "high")            # info -> low only; high needs a human
+    d = tighten_severity("info", "high")  # info -> low only; high needs a human
     assert d.value == "low" and d.applied and d.needs_human
 
 

@@ -26,10 +26,12 @@ pytest -q && python examples/rag_answer.py
 ```python
 from agentic_core import check_sources, validate_grounding, decide, render_untrusted
 
-gate = check_sources(retrieved, records, policy, "finance_limits")       # 1. which sources may answer
-raw = model(prompt_with(render_untrusted(gate.allowed)))                 # 2. only allowed chunks reach the model
-grounding = validate_grounding(claims_from(raw), gate.allowed)           # 3. quotes must be in what it was shown
-decision = decide(grounding, gate)                                       # 4. VERIFIED / SUPPORTED / CONFLICTING / REFUSED
+gate = check_sources(retrieved, records, policy, "finance_limits")  # 1. which sources may answer
+raw = model(prompt_with(render_untrusted(gate.allowed)))  # 2. only allowed chunks reach the model
+grounding = validate_grounding(
+    claims_from(raw), gate.allowed
+)  # 3. quotes must be in what it was shown
+decision = decide(grounding, gate)  # 4. VERIFIED / SUPPORTED / CONFLICTING / REFUSED
 ```
 
 [`examples/rag_answer.py`](examples/rag_answer.py) runs this end to end, offline, for a trusted source (an HRIS
