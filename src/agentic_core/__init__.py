@@ -4,6 +4,20 @@
 No LLM calls and no dependencies: plain dataclasses and deterministic checks around a model's output.
 """
 
+from agentic_core.actions import (
+    ActionPolicy,
+    ActionProposal,
+    ActionRule,
+    AuthzDecision,
+    AuthzResult,
+    Grant,
+    GrantCheck,
+    GrantIssuer,
+    Principal,
+    authorize,
+    parse_action_proposals,
+    strip_action_commands,
+)
 from agentic_core.grounding import (
     Claim,
     DroppedClaim,
@@ -41,14 +55,23 @@ __version__ = "0.2.0.dev0"
 
 __all__ = [
     "SEVERITIES",
+    "ActionPolicy",
+    "ActionProposal",
+    "ActionRule",
+    "AuthzDecision",
+    "AuthzResult",
     "Claim",
     "Decision",
     "DropReason",
     "DroppedClaim",
     "Evidence",
+    "Grant",
+    "GrantCheck",
+    "GrantIssuer",
     "KeptClaim",
     "LeakFinding",
     "LeakResult",
+    "Principal",
     "ProtectedValue",
     "RejectedSource",
     "SeverityDecision",
@@ -59,6 +82,7 @@ __all__ = [
     "ValidationResult",
     "Verdict",
     "VerifiedEvidence",
+    "authorize",
     "cap_new_severity",
     "check_sources",
     "decide",
@@ -66,12 +90,14 @@ __all__ = [
     "downgrade_only",
     "make_canary",
     "normalize",
+    "parse_action_proposals",
     "parse_json_object",
     "prompt_overlap",
     "render_untrusted",
     "sanitize_llm_text",
     "scan_for_leaks",
     "sha256_text",
+    "strip_action_commands",
     "tighten_severity",
     "validate_grounding",
 ]
