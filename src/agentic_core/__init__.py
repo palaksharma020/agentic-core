@@ -37,7 +37,7 @@ from agentic_core.sources import (
 from agentic_core.text import normalize, parse_json_object, sanitize_llm_text
 from agentic_core.verdict import Decision, Verdict, decide, downgrade_only
 
-__version__ = "0.1.0"
+__version__ = "0.2.0.dev0"
 
 __all__ = [
     "SEVERITIES",
