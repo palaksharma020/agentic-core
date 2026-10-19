@@ -14,6 +14,15 @@ from agentic_core.grounding import (
     VerifiedEvidence,
     validate_grounding,
 )
+from agentic_core.leakage import (
+    LeakFinding,
+    LeakResult,
+    ProtectedValue,
+    disguised_forms,
+    make_canary,
+    prompt_overlap,
+    scan_for_leaks,
+)
 from agentic_core.severity import SEVERITIES, SeverityDecision, cap_new_severity, tighten_severity
 from agentic_core.sources import (
     RejectedSource,
@@ -38,6 +47,9 @@ __all__ = [
     "DroppedClaim",
     "Evidence",
     "KeptClaim",
+    "LeakFinding",
+    "LeakResult",
+    "ProtectedValue",
     "RejectedSource",
     "SeverityDecision",
     "SourceCheck",
@@ -50,11 +62,15 @@ __all__ = [
     "cap_new_severity",
     "check_sources",
     "decide",
+    "disguised_forms",
     "downgrade_only",
+    "make_canary",
     "normalize",
     "parse_json_object",
+    "prompt_overlap",
     "render_untrusted",
     "sanitize_llm_text",
+    "scan_for_leaks",
     "sha256_text",
     "tighten_severity",
     "validate_grounding",
