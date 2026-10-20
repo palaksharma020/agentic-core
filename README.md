@@ -1,69 +1,160 @@
 # agentic-core
 
-Small, framework-agnostic utilities for building agents whose output you can check.
-No LLM calls, no dependencies: plain dataclasses and deterministic checks that sit around a model.
+Deterministic checks that sit around a language model, so an agent's inputs, outputs and actions can be verified
+in code instead of trusted.
 
-The first utilities form a **validation harness for RAG and tool-using agents**:
+The model can propose; code decides. Every module here follows the same rules:
 
-| Module | What it does |
-|---|---|
-| `sources` | **Source gate.** Before the model runs: is each retrieved chunk registered, from an allowed trust tier for this question class, unchanged since ingest (SHA-256) and fresh? Plus `render_untrusted()` for spotlighting. |
-| `grounding` | **Faithfulness.** `validate_grounding()` keeps a claim only if its quote appears (normalized) in the chunks the model was *shown*, and says why it dropped the others: invented (`not_in_source`) or real text that was not in the prompt (`not_in_prompt`, recalled or invented). |
-| `verdict` | **Decision.** Combines both into `VERIFIED / SUPPORTED / CONFLICTING / REFUSED`. A model may downgrade the label, never upgrade it. |
-| `severity` | **Limited authority.** Tighten-only severity with a floor, one level per proposal and a ceiling above which a human decides. |
-| `text` | `normalize()`, `sanitize_llm_text()` (strip links, images, URLs, HTML tags; keeps `<` and `>` in prose), `parse_json_object()` (raises, so you can fail closed). |
+- **No LLM calls, no dependencies.** Plain Python dataclasses and functions; nothing to configure or host.
+- **Deterministic.** The same input always gets the same decision, so every control is unit-testable.
+- **Fail closed.** Unknown, malformed or unparseable input is denied or refused, never let through.
+- **Models only tighten.** Where a model or classifier contributes, it can lower a verdict or deny an action. It
+  can never raise a verdict or allow something the code refused.
+- **Honest about limits.** Each capability lists what it does not prove (see below).
 
-Guards for **LLM apps that talk to users and take actions** (0.2.0):
-
-| Module | What it does |
-|---|---|
-| `leakage` | **Egress scan.** `scan_for_leaks()` checks a reply for a random canary (`make_canary()`), protected values in disguised forms (case, separators, leetspeak, reversed, base64, acrostic) and verbatim prompt overlap. Findings name the rule, never the secret. |
-| `actions` | **The model proposes, code decides, the human confirms.** `parse_action_proposals()` grants nothing; `authorize()` checks a proposal against your validators for a session principal and fails closed; `GrantIssuer` issues HMAC-signed, expiring, single-use grants bound to the principal and the exact action. |
-| `advisor` | **Tighten-only advice.** An `InjectionAdvisor` protocol for probabilistic classifiers; `tighten_only()` lets advice deny, never allow. Backends live outside this package. |
-
-## Quickstart
+## Install
 
 ```bash
-python3 -m venv .venv && . .venv/bin/activate
-pip install -e ".[dev]"
-pytest -q && python examples/rag_answer.py
+pip install "agentic-core @ git+https://github.com/palaksharma020/agentic-core@v0.2.0"
 ```
 
-## Example
+Python 3.10 or later. For development: `pip install -e ".[dev]"`.
+
+## Capabilities
+
+### Retrieval and grounding: can this answer be trusted?
+
+| Module | What it decides | Main API | Since |
+|---|---|---|---|
+| `sources` | Before the model runs: is each retrieved chunk registered, from a trust tier allowed for this question, unchanged since ingest (SHA-256) and fresh? Untrusted text is spotlighted. | `check_sources()`, `render_untrusted()` | 0.1.0 |
+| `grounding` | After the model runs: does each claim quote text the model was actually shown? Dropped claims say why: invented, or real text that wasn't in the prompt. | `validate_grounding()` | 0.1.0 |
+| `verdict` | Combines the two into `VERIFIED`, `SUPPORTED`, `CONFLICTING` or `REFUSED`. A model may downgrade the label, never upgrade it. | `decide()`, `downgrade_only()` | 0.1.0 |
+| `severity` | Limited authority for model-proposed severities: tighten-only, with a floor, one level per step and a ceiling above which a human decides. | `tighten_severity()`, `cap_new_severity()` | 0.1.0 |
+
+### Output safety: what may leave the server?
+
+| Module | What it decides | Main API | Since |
+|---|---|---|---|
+| `leakage` | Does a reply contain a random canary from the prompt, a protected value in any common disguise (case, separators, leetspeak, reversed, base64, acrostic), or a verbatim dump of the prompt? Findings name the rule, never the secret. | `scan_for_leaks()`, `make_canary()`, `ProtectedValue` | 0.2.0 |
+| `text` | Strip HTML tags, markdown images and links, and bare URLs from model text before it is rendered (angle brackets in prose survive). Parse JSON from model output, or raise so the caller fails closed. | `sanitize_llm_text()`, `parse_json_object()`, `normalize()` | 0.1.0 |
+
+### Actions and authority: may this happen?
+
+| Module | What it decides | Main API | Since |
+|---|---|---|---|
+| `actions` | Is a model-proposed action allowed for this principal? Parsing grants nothing; your validators decide; unknown actions and malformed parameters are denied. Allowed actions get an HMAC-signed grant bound to the principal and the exact action, expiring and single-use, so only a confirmation the user makes can execute them. | `parse_action_proposals()`, `authorize()`, `ActionPolicy`, `GrantIssuer` | 0.2.0 |
+| `advisor` | How probabilistic classifiers (prompt-injection detectors, LLM judges) plug in: a protocol plus `tighten_only()`, so advice can deny but never allow. Backends live outside this package. | `InjectionAdvisor`, `tighten_only()`, `NullAdvisor` | 0.2.0 |
+
+## Examples
+
+### Validate a RAG answer
 
 ```python
-from agentic_core import check_sources, validate_grounding, decide, render_untrusted
+from agentic_core import check_sources, decide, render_untrusted, validate_grounding
 
-gate = check_sources(retrieved, records, policy, "finance_limits")  # 1. which sources may answer
-raw = model(prompt_with(render_untrusted(gate.allowed)))  # 2. only allowed chunks reach the model
-grounding = validate_grounding(
-    claims_from(raw), gate.allowed
-)  # 3. quotes must be in what it was shown
-decision = decide(grounding, gate)  # 4. VERIFIED / SUPPORTED / CONFLICTING / REFUSED
+# 1. Which retrieved sources may answer this question?
+gate = check_sources(retrieved, records, policy, "finance_limits")
+# 2. Only allowed chunks reach the model, marked as untrusted.
+raw = model(prompt_with(render_untrusted(gate.allowed)))
+# 3. Every quote must appear in what the model was shown.
+grounding = validate_grounding(claims_from(raw), gate.allowed)
+# 4. VERIFIED / SUPPORTED / CONFLICTING / REFUSED
+decision = decide(grounding, gate)
 ```
 
-[`examples/rag_answer.py`](examples/rag_answer.py) runs this end to end, offline, for a trusted source (an HRIS
-balance) and an untrusted one (a wiki page edited to state a false wire-transfer rule).
+[`examples/rag_answer.py`](examples/rag_answer.py) runs this end to end, offline: a trusted source (an HR balance)
+and an untrusted one (a wiki page edited to state a false wire-transfer rule).
+
+### Guard a chatbot reply and the action it proposes
+
+```python
+from agentic_core import (
+    ActionPolicy,
+    ActionRule,
+    AuthzDecision,
+    GrantIssuer,
+    Principal,
+    ProtectedValue,
+    authorize,
+    make_canary,
+    parse_action_proposals,
+    sanitize_llm_text,
+    scan_for_leaks,
+    strip_action_commands,
+)
+
+# Put f"Internal reference: {CANARY}" at the end of the system prompt.
+CANARY = make_canary()
+# Secrets live in server config, never in the prompt.
+PROMO = ProtectedValue("promo_code", "PEAK40")
+
+
+# A validator returns a rule id to deny, or None.
+def owns_order(args, principal):
+    return None if ORDERS.get(args["order_id"]) == principal.id else "not_owner"
+
+
+POLICY = ActionPolicy({"REFUND": ActionRule(("order_id", "amount"), (owns_order,))})
+grants = GrantIssuer(key=SERVER_KEY)  # 32+ bytes, from your secret store
+
+# The principal comes from your authenticated session, never from the chat.
+user = Principal(session.user_id)
+leak = scan_for_leaks(reply, protected=[PROMO], canaries=[CANARY], reference_prompt=system_prompt)
+if leak.leaked:
+    reply = "Sorry, I can't share that."  # and drop any actions in this reply
+else:
+    # "[ACTION:REFUND:A1001:299]" in the reply becomes a proposal; parsing grants nothing.
+    for proposal in parse_action_proposals(reply):
+        result = authorize(proposal, user, POLICY)
+        if result.decision is AuthzDecision.NEEDS_CONFIRMATION:
+            # Execute only after grants.redeem() succeeds in the confirm handler.
+            show_confirm_button(grants.issue(user, proposal).token)
+        else:
+            show_denied(result.reasons)  # e.g. ("not_owner",)
+    # Then render it as text (textContent), never as HTML.
+    reply = sanitize_llm_text(strip_action_commands(reply))
+```
+
+The confirm handler calls `grants.redeem(token, user)`. It returns `valid=False` with a reason
+(`wrong_principal`, `expired`, `already_used`, `bad_signature`) unless it is the same user's unused, unexpired grant.
+Re-run `authorize()` on `check.proposal` before executing, because state can change between proposal and click.
 
 ## What these checks do not prove
 
-- A grounded quote shows the claim is **faithful** to text the model was given, not that the claim **follows**
-  from it. Use entailment checks or human review for high-impact claims.
-- The source gate trusts your **ingest records** (tier, hash, date). Protect those records, for example by signing
-  them, as carefully as the content.
-- Spotlighting reduces indirect prompt injection; it does not prevent it. That is why the other checks do not
+**Retrieval and grounding**
+- A grounded quote shows a claim is faithful to text the model was given, not that the claim follows from it.
+  Use entailment checks or human review for high-impact claims.
+- The source gate trusts your ingest records (tier, hash, date). Protect them, for example by signing them, as
+  carefully as the content.
+- Spotlighting reduces indirect prompt injection; it does not prevent it. That is why the other checks don't
   depend on the model obeying instructions.
-- The leak scan catches disguises it knows. The real fix is keeping secrets out of anything the model can see;
-  the scan catches mistakes. Prompt overlap misses translations (the canary catches those).
-- `authorize()` is only as good as the principal you pass. Take it from your authenticated session, never from
-  model output or chat history. Used grant ids are kept in memory: use a shared store with a TTL across processes.
-- An advisor's recall on a test set overstates its value: successful attacks tend to look benign.
 
-## Benchmark
+**Output safety**
+- The leak scan catches the disguises it knows. The real fix is keeping secrets out of anything the model can see;
+  the scan catches mistakes. Prompt overlap misses translations; the canary catches those, unless the model drops
+  the canary line, which the overlap check then catches.
+- `sanitize_llm_text()` is defense in depth, not an XSS fix. Render model output as text, and add a
+  Content-Security-Policy.
+
+**Actions and authority**
+- `authorize()` is only as good as the principal you pass. Take it from your authenticated session, never from
+  model output, tool arguments the model controls, or chat history.
+- Used grant ids are kept in memory: one process, lost on restart. Across processes, use a shared store with a TTL.
+- A confirmation is only as strong as the page that shows it: script injected into that page can redeem grants
+  too. Fix XSS, and use step-up confirmation (passkey or out-of-band) for high-value actions.
+- An advisor's recall on a test set overstates its value against real attacks: successful attacks tend to look
+  benign, such as an innocent-looking message that relies on forged conversation history.
+
+## Development
 
 ```bash
-python bench/bench_grounding.py
+python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]"
+ruff check . && ruff format --check . && mypy src && pytest -q
+python examples/rag_answer.py              # offline example
+python bench/bench_grounding.py            # grounding cost per claim
 ```
+
+Changes are listed in [CHANGELOG.md](CHANGELOG.md). To add a capability, follow [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 
