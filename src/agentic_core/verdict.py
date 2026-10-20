@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Verdict: combine the source gate and grounding into one label for the answer, deterministically.
 
     VERIFIED     every delivered claim is grounded in allowed sources and corroboration is met
@@ -8,6 +9,7 @@
 Claims that fail grounding are removed from the answer and listed in the reasons. A model may push the label
 down (downgrade_only), never up: the model may propose, never promote trust.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -40,30 +42,45 @@ def downgrade_only(current: Verdict, proposed: Verdict | str) -> Verdict:
 @dataclass
 class Decision:
     verdict: Verdict
-    claims: list[KeptClaim] = field(default_factory=list)     # what may be shown to the user
+    claims: list[KeptClaim] = field(default_factory=list)  # what may be shown to the user
     reasons: list[str] = field(default_factory=list)
 
 
-def decide(grounding: ValidationResult, sources: SourceCheck, *,
-           flags: Iterable[Verdict | str] = ()) -> Decision:
+def decide(
+    grounding: ValidationResult, sources: SourceCheck, *, flags: Iterable[Verdict | str] = ()
+) -> Decision:
     """flags: labels proposed by a reviewer model or rule (e.g. "conflicting"); applied downgrade-only."""
-    reasons = [f"source rejected: {r.source_id} ({r.reason.value}: {r.detail})" for r in sources.rejected]
-    reasons += [f"claim removed: {d.claim.text[:80]!r} ({d.reason.value})" for d in grounding.dropped]
+    reasons = [
+        f"source rejected: {r.source_id} ({r.reason.value}: {r.detail})" for r in sources.rejected
+    ]
+    reasons += [
+        f"claim removed: {d.claim.text[:80]!r} ({d.reason.value})" for d in grounding.dropped
+    ]
 
     if not sources.ok:
-        return Decision(Verdict.REFUSED, [], reasons + ["no source is allowed for this question class"])
+        return Decision(
+            Verdict.REFUSED, [], [*reasons, "no source is allowed for this question class"]
+        )
     # defence in depth: grounding must have been run against the allowed chunks only
     stray = {e.source_id for k in grounding.kept for e in k.evidence} - set(sources.allowed)
     if stray:
-        return Decision(Verdict.REFUSED, [], reasons + [f"evidence cites sources outside the gate: {sorted(stray)}"])
+        return Decision(
+            Verdict.REFUSED,
+            [],
+            [*reasons, f"evidence cites sources outside the gate: {sorted(stray)}"],
+        )
     if not grounding.kept:
-        return Decision(Verdict.REFUSED, [], reasons + ["no claim is grounded in the allowed sources"])
+        return Decision(
+            Verdict.REFUSED, [], [*reasons, "no claim is grounded in the allowed sources"]
+        )
 
     origins = {sources.origins[e.source_id] for k in grounding.kept for e in k.evidence}
     verdict = Verdict.VERIFIED
     if len(origins) < sources.origins_needed:
         verdict = Verdict.SUPPORTED
-        reasons.append(f"corroboration: {len(origins)} of {sources.origins_needed} independent origins")
+        reasons.append(
+            f"corroboration: {len(origins)} of {sources.origins_needed} independent origins"
+        )
     for f in flags:
         new = downgrade_only(verdict, f)
         if new != verdict:

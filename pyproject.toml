@@ -20,10 +20,31 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.14", "mypy>=1.18"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_core"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Explicit rule set so CI and every laptop agree (no user-level config).
+# TRY is not selected: text.parse_json_object raises ValueError on purpose,
+# because callers map parse failures to REFUSED (fail closed).
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "FURB"]
+# Line length is the formatter's job; long literals (test strings, URLs) stay readable.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use look-alike Unicode on purpose (normalisation and injection fixtures).
+"tests/**" = ["RUF001", "RUF002", "RUF003"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src"]

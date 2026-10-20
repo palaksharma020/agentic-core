@@ -1,22 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
 """Text helpers for handling model output safely.
 
 - normalize(): the comparison form used for grounding (quotes, whitespace, case)
 - sanitize_llm_text(): strip links, images, bare URLs and HTML from model-written text before it is rendered
 - parse_json_object(): extract one JSON object from model output, or raise so the caller can fail closed
 """
+
 from __future__ import annotations
 
 import json
 import re
+from typing import Any
 
-_QUOTES = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"'})
+_QUOTES = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"'})  # noqa: RUF001 (the table itself)
 _SPACE = re.compile(r"\s+")
 
 _MD_IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 _MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
-_URL = re.compile(r"\b(?:https?|ftp)://\S+|\bwww\.\S+", re.I)
+_URL = re.compile(r"\b(?:https?|ftp)://\S+|\bwww\.\S+", re.IGNORECASE)
 _HTML = re.compile(r"<[^>]{1,200}>")
-_JSON_OBJECT = re.compile(r"\{.*\}", re.S)
+_JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def normalize(text: str) -> str:
@@ -39,7 +42,7 @@ def sanitize_llm_text(text: str) -> str:
     return _HTML.sub("", text).strip()
 
 
-def parse_json_object(text: str) -> dict:
+def parse_json_object(text: str) -> dict[str, Any]:
     """Return the JSON object in `text` (whole text, or the outermost {...} span).
 
     Raises ValueError (json.JSONDecodeError is a subclass) when there is no object. Callers should
