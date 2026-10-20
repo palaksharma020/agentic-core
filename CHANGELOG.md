@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - `CHANGELOG.md`, `CONTRIBUTING.md` (how to add a capability) and a pull request template.
+- CI on every pull request and push to `main`: `ruff check`, `ruff format --check`, `mypy src` and `pytest` on Python 3.10 and 3.12.
 
 ### Changed
 - README reorganized as an index: design rules, capabilities grouped by the question they answer (with the version
