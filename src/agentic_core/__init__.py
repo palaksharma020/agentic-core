@@ -18,6 +18,7 @@ from agentic_core.actions import (
     parse_action_proposals,
     strip_action_commands,
 )
+from agentic_core.advisor import AdvisorScore, InjectionAdvisor, NullAdvisor, tighten_only
 from agentic_core.grounding import (
     Claim,
     DroppedClaim,
@@ -58,6 +59,7 @@ __all__ = [
     "ActionPolicy",
     "ActionProposal",
     "ActionRule",
+    "AdvisorScore",
     "AuthzDecision",
     "AuthzResult",
     "Claim",
@@ -68,9 +70,11 @@ __all__ = [
     "Grant",
     "GrantCheck",
     "GrantIssuer",
+    "InjectionAdvisor",
     "KeptClaim",
     "LeakFinding",
     "LeakResult",
+    "NullAdvisor",
     "Principal",
     "ProtectedValue",
     "RejectedSource",
@@ -98,6 +102,7 @@ __all__ = [
     "scan_for_leaks",
     "sha256_text",
     "strip_action_commands",
+    "tighten_only",
     "tighten_severity",
     "validate_grounding",
 ]
