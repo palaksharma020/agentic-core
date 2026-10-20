@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-core"
-version = "0.1.0"
-description = "Small, framework-agnostic utilities for building agents you can check: grounding, source gates, verdicts."
+version = "0.2.0"
+description = "Small, framework-agnostic utilities for building agents you can check: grounding, source gates, verdicts, leak scanning, action authorization."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
