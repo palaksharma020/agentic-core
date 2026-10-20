@@ -11,7 +11,15 @@ The first utilities form a **validation harness for RAG and tool-using agents**:
 | `grounding` | **Faithfulness.** `validate_grounding()` keeps a claim only if its quote appears (normalized) in the chunks the model was *shown*, and says why it dropped the others: invented (`not_in_source`) or real text that was not in the prompt (`not_in_prompt`, recalled or invented). |
 | `verdict` | **Decision.** Combines both into `VERIFIED / SUPPORTED / CONFLICTING / REFUSED`. A model may downgrade the label, never upgrade it. |
 | `severity` | **Limited authority.** Tighten-only severity with a floor, one level per proposal and a ceiling above which a human decides. |
-| `text` | `normalize()`, `sanitize_llm_text()` (strip links, images, URLs, HTML), `parse_json_object()` (raises, so you can fail closed). |
+| `text` | `normalize()`, `sanitize_llm_text()` (strip links, images, URLs, HTML tags; keeps `<` and `>` in prose), `parse_json_object()` (raises, so you can fail closed). |
+
+Guards for **LLM apps that talk to users and take actions** (0.2.0):
+
+| Module | What it does |
+|---|---|
+| `leakage` | **Egress scan.** `scan_for_leaks()` checks a reply for a random canary (`make_canary()`), protected values in disguised forms (case, separators, leetspeak, reversed, base64, acrostic) and verbatim prompt overlap. Findings name the rule, never the secret. |
+| `actions` | **The model proposes, code decides, the human confirms.** `parse_action_proposals()` grants nothing; `authorize()` checks a proposal against your validators for a session principal and fails closed; `GrantIssuer` issues HMAC-signed, expiring, single-use grants bound to the principal and the exact action. |
+| `advisor` | **Tighten-only advice.** An `InjectionAdvisor` protocol for probabilistic classifiers; `tighten_only()` lets advice deny, never allow. Backends live outside this package. |
 
 ## Quickstart
 
@@ -45,6 +53,11 @@ balance) and an untrusted one (a wiki page edited to state a false wire-transfer
   them, as carefully as the content.
 - Spotlighting reduces indirect prompt injection; it does not prevent it. That is why the other checks do not
   depend on the model obeying instructions.
+- The leak scan catches disguises it knows. The real fix is keeping secrets out of anything the model can see;
+  the scan catches mistakes. Prompt overlap misses translations (the canary catches those).
+- `authorize()` is only as good as the principal you pass. Take it from your authenticated session, never from
+  model output or chat history. Used grant ids are kept in memory: use a shared store with a TTL across processes.
+- An advisor's recall on a test set overstates its value: successful attacks tend to look benign.
 
 ## Benchmark
 
