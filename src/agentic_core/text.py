@@ -18,7 +18,8 @@ _SPACE = re.compile(r"\s+")
 _MD_IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 _MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 _URL = re.compile(r"\b(?:https?|ftp)://\S+|\bwww\.\S+", re.IGNORECASE)
-_HTML = re.compile(r"<[^>]{1,200}>")
+# A tag starts with "<" + letter, "/" or "!"; so "I <3 it" or "5 > 4" are text, not markup.
+_HTML = re.compile(r"<!--.*?-->|<[/!]?[A-Za-z][^>]{0,200}>", re.DOTALL)
 _JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
 
 
