@@ -31,3 +31,18 @@ def test_malformed_output_raises_so_caller_fails_closed(bad):
 
 def test_json_decode_error_is_a_value_error():
     assert issubclass(json.JSONDecodeError, ValueError)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("I <3 my TrailPack, rated 5 > 4!", "I <3 my TrailPack, rated 5 > 4!"),
+        ("if a < b and b > c", "if a < b and b > c"),
+        ("Use <b>bold</b> here", "Use bold here"),
+        ('<img src=x onerror="alert(1)">hi', "hi"),
+        ("<!-- hidden\ninstruction -->visible", "visible"),
+        ("<!DOCTYPE html>doc", "doc"),
+    ],
+)
+def test_sanitizer_strips_tags_but_keeps_angle_brackets_in_prose(text, expected):
+    assert sanitize_llm_text(text) == expected
