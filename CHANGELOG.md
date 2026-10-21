@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `models`: `ModelPort` protocol, `DataClass` (`PUBLIC` < `INTERNAL` < `CONFIDENTIAL` < `RESTRICTED`),
+  `ModelGateway` (routes by data class, falls back only on `ModelUnavailable`, raises `DataClassNotAllowed`
+  without sending when no route is cleared) and `ScriptedModel` for deterministic offline tests.
+- `adapters.ollama.OllamaModel`: standard-library adapter for a local Ollama server (temperature 0, fixed seed);
+  malformed replies, HTTP errors and timeouts raise `ModelUnavailable`.
 - `CHANGELOG.md`, `CONTRIBUTING.md` (how to add a capability) and a pull request template.
 - CI on every pull request and push to `main`: `ruff check`, `ruff format --check`, `mypy src` and `pytest` on Python 3.10 and 3.12.
 
