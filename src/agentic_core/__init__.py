@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """agentic-core: small, framework-agnostic utilities for building agents you can check.
 
-No LLM calls and no dependencies: plain dataclasses and deterministic checks around a model's output.
+No dependencies, and the core makes no LLM calls: plain dataclasses and deterministic checks around a model's
+output. Backends that do talk to a model live in agentic_core.adapters and are imported explicitly.
 """
 
 from agentic_core.actions import (
@@ -38,6 +39,16 @@ from agentic_core.leakage import (
     prompt_overlap,
     scan_for_leaks,
 )
+from agentic_core.models import (
+    Completion,
+    DataClass,
+    DataClassNotAllowed,
+    Message,
+    ModelGateway,
+    ModelPort,
+    ModelUnavailable,
+    ScriptedModel,
+)
 from agentic_core.severity import SEVERITIES, SeverityDecision, cap_new_severity, tighten_severity
 from agentic_core.sources import (
     RejectedSource,
@@ -63,6 +74,9 @@ __all__ = [
     "AuthzDecision",
     "AuthzResult",
     "Claim",
+    "Completion",
+    "DataClass",
+    "DataClassNotAllowed",
     "Decision",
     "DropReason",
     "DroppedClaim",
@@ -74,10 +88,15 @@ __all__ = [
     "KeptClaim",
     "LeakFinding",
     "LeakResult",
+    "Message",
+    "ModelGateway",
+    "ModelPort",
+    "ModelUnavailable",
     "NullAdvisor",
     "Principal",
     "ProtectedValue",
     "RejectedSource",
+    "ScriptedModel",
     "SeverityDecision",
     "SourceCheck",
     "SourcePolicy",
