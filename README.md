@@ -5,7 +5,8 @@ in code instead of trusted.
 
 The model can propose; code decides. Every module here follows the same rules:
 
-- **No LLM calls, no dependencies.** Plain Python dataclasses and functions; nothing to configure or host.
+- **No dependencies; the core makes no LLM calls.** Plain Python dataclasses and functions. The only code that talks
+  to a model is an adapter under `agentic_core.adapters`, imported explicitly and standard-library only.
 - **Deterministic.** The same input always gets the same decision, so every control is unit-testable.
 - **Fail closed.** Unknown, malformed or unparseable input is denied or refused, never let through.
 - **Models only tighten.** Where a model or classifier contributes, it can lower a verdict or deny an action. It
@@ -119,6 +120,13 @@ The confirm handler calls `grants.redeem(token, user)`. It returns `valid=False`
 (`wrong_principal`, `expired`, `already_used`, `bad_signature`) unless it is the same user's unused, unexpired grant.
 Re-run `authorize()` on `check.proposal` before executing, because state can change between proposal and click.
 
+### Models: which model may see this data?
+
+| Module | What it decides | Main API | Since |
+|---|---|---|---|
+| `models` | Which model a conversation may go to. Each route declares the most sensitive data it may receive (`PUBLIC` < `INTERNAL` < `CONFIDENTIAL` < `RESTRICTED`); the gateway uses the first cleared route, falls back only when a model is unavailable, and never sends data above every route. `ScriptedModel` gives deterministic, offline answers for tests. | `ModelGateway`, `ModelPort`, `DataClass`, `ScriptedModel` | unreleased |
+| `adapters.ollama` | A `ModelPort` for a local Ollama server, standard library only. Temperature 0 and a fixed seed; any malformed reply, HTTP error or timeout is `ModelUnavailable`, never a partial answer. | `OllamaModel` | unreleased |
+
 ## What these checks do not prove
 
 **Retrieval and grounding**
@@ -144,6 +152,14 @@ Re-run `authorize()` on `check.proposal` before executing, because state can cha
   too. Fix XSS, and use step-up confirmation (passkey or out-of-band) for high-value actions.
 - An advisor's recall on a test set overstates its value against real attacks: successful attacks tend to look
   benign, such as an innocent-looking message that relies on forged conversation history.
+
+**Models**
+- The gateway trusts the data class you pass. Derive it from what your code put in the prompt (the most
+  sensitive retrieved document), never from the model or the user.
+- A fixed seed and temperature 0 make answers repeatable on the same machine and model version, not across
+  hardware or model updates. Security decisions must not depend on the exact wording of an answer.
+- Fallback is for availability only. A model that answers badly is not "unavailable"; validate answers with the
+  grounding and verdict checks.
 
 ## Development
 
