@@ -3,7 +3,8 @@
 
 The model runs on this machine, so it is cleared for every data class (RESTRICTED) by default; pass a lower
 max_data_class if the server is remote. Requests use temperature 0 and a fixed seed so the same prompt gives
-the same answer on the same machine. Anything other than a well-formed reply (connection refused, timeout,
+the same answer on the same machine. json_output=True asks Ollama to constrain the reply to valid JSON,
+for agents that speak a JSON protocol (it shapes the syntax, not the content: still validate). Anything other than a well-formed reply (connection refused, timeout,
 HTTP error, malformed JSON, missing text) raises ModelUnavailable: never a partial or guessed answer.
 """
 
@@ -29,6 +30,7 @@ class OllamaModel:
         max_data_class: DataClass = DataClass.RESTRICTED,
         seed: int = 42,
         max_output_tokens: int | None = None,
+        json_output: bool = False,
     ) -> None:
         parsed = urlparse(base_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
@@ -41,16 +43,18 @@ class OllamaModel:
         self.options: dict[str, int | float] = {"temperature": 0, "seed": seed}
         if max_output_tokens is not None:
             self.options["num_predict"] = max_output_tokens
+        self.json_output = json_output  # Ollama constrains the reply to valid JSON (format="json")
 
     def complete(self, messages: Sequence[Message]) -> Completion:
-        body = json.dumps(
-            {
-                "model": self.model,
-                "stream": False,
-                "messages": [{"role": m.role, "content": m.content} for m in messages],
-                "options": self.options,
-            }
-        ).encode()
+        payload: dict[str, object] = {
+            "model": self.model,
+            "stream": False,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "options": self.options,
+        }
+        if self.json_output:
+            payload["format"] = "json"
+        body = json.dumps(payload).encode()
         request = urllib.request.Request(
             f"{self.base_url}/api/chat", data=body, headers={"Content-Type": "application/json"}
         )

@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `OllamaModel(json_output=True)` asks Ollama to constrain replies to valid JSON, for agents that use a JSON
+  tool protocol. It shapes the syntax only; callers still validate the content.
 - `models`: `ModelPort` protocol, `DataClass` (`PUBLIC` < `INTERNAL` < `CONFIDENTIAL` < `RESTRICTED`),
   `ModelGateway` (routes by data class, falls back only on `ModelUnavailable`, raises `DataClassNotAllowed`
   without sending when no route is cleared) and `ScriptedModel` for deterministic offline tests.
