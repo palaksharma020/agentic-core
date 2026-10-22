@@ -110,3 +110,12 @@ def test_nothing_listening_is_unavailable():
 def test_only_http_urls_are_accepted(url):
     with pytest.raises(ValueError):
         OllamaModel("llama3.2:3b", base_url=url)
+
+
+def test_json_output_requests_json_format(stub):
+    state, url = stub
+    OllamaModel("llama3.2:3b", base_url=url, json_output=True).complete(ASK)
+    OllamaModel("llama3.2:3b", base_url=url).complete(ASK)
+    with_json, without = (r["json"] for r in state.requests)
+    assert isinstance(with_json, dict) and with_json["format"] == "json"
+    assert isinstance(without, dict) and "format" not in without
