@@ -5,8 +5,9 @@ ToolGateway.check(ctx, tool, args) runs, in order:
     1. a delegation context is present           (no context, no call)
     2. the agent is active and the tool is in its manifest   (lifecycle registry, asked every call)
     3. the tool is registered                    (unknown tools are denied)
-    4. the arguments match the tool's schema     (a small JSON-Schema subset, see validate_args)
-    5. the policy engine allows it               (a PolicyEngine: OPA in production; any error is a deny)
+    4. the tool is pinned                        (optional ToolTrust: in a signed manifest, unchanged)
+    5. the arguments match the tool's schema     (a small JSON-Schema subset, see validate_args)
+    6. the policy engine allows it               (a PolicyEngine: OPA in production; any error is a deny)
 `approved=True` tells the policy a human approved this exact payload (see approvals); only the server sets it,
 after redeeming the approval, never the model.
 The model never decides any of these. The gateway is the policy enforcement point (PEP); the policy engine
@@ -28,11 +29,18 @@ from agentic_core.lifecycle import RegistryPort, check_agent
 class GatewayDecision:
     allowed: bool
     reasons: tuple[str, ...] = ()
-    stage: str = ""  # context | lifecycle | registry | schema | policy | allowed
+    stage: str = ""  # context | lifecycle | registry | pinning | schema | policy | allowed
 
 
 class PolicyUnavailable(Exception):
     """The policy engine could not decide. The gateway treats this as a deny."""
+
+
+@runtime_checkable
+class ToolTrust(Protocol):
+    def check(self, tool: str) -> tuple[bool, str]:
+        """(trusted, reason). manifests.PinnedTools implements it."""
+        ...
 
 
 @runtime_checkable
@@ -88,6 +96,7 @@ class ToolGateway:
     schemas: Mapping[str, Mapping[str, Any]]
     policy: PolicyEngine
     registry: RegistryPort | None = None
+    pins: ToolTrust | None = None
     decisions: list[GatewayDecision] = field(default_factory=list)
 
     def check(
@@ -114,6 +123,10 @@ class ToolGateway:
         schema = self.schemas.get(tool)
         if schema is None:
             return GatewayDecision(False, (f"unknown tool {tool!r}",), "registry")
+        if self.pins is not None:
+            trusted, why = self.pins.check(tool)
+            if trusted is not True:
+                return GatewayDecision(False, (why or "tool is not trusted",), "pinning")
         if not isinstance(args, Mapping):
             return GatewayDecision(False, ("arguments must be an object",), "schema")
         problems = validate_args(schema, args)
