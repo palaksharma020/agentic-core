@@ -6,6 +6,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `identity`: `DelegationContext` (user, tenant, agent, scopes; built from the server session) with an RFC 8693-style
+  `act_claim()`, and `attenuate()`, which only ever narrows scopes.
+- `retrieval`: `RetrieverPort`, `tenant_role_descriptor()` (document-level security as a tenant query, field-level
+  security as grant/except), `MemoryScopedRetriever` for tests, and `RetrievalUnavailable` (fail closed).
+- `adapters.elastic.ElasticScopedRetriever`: mints a short-lived API key per request, limited to the user's tenant
+  and visible fields, queries with it and invalidates it as owner. Any failure is `RetrievalUnavailable`; there is
+  no fallback to a broader credential. Duck-typed, so agentic-core still has no dependencies.
 - `OllamaModel(json_output=True)` asks Ollama to constrain replies to valid JSON, for agents that use a JSON
   tool protocol. It shapes the syntax only; callers still validate the content.
 - `models`: `ModelPort` protocol, `DataClass` (`PUBLIC` < `INTERNAL` < `CONFIDENTIAL` < `RESTRICTED`),

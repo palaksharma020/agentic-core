@@ -120,6 +120,14 @@ The confirm handler calls `grants.redeem(token, user)`. It returns `valid=False`
 (`wrong_principal`, `expired`, `already_used`, `bad_signature`) unless it is the same user's unused, unexpired grant.
 Re-run `authorize()` on `check.proposal` before executing, because state can change between proposal and click.
 
+### Identity and retrieval: whose data may the agent see?
+
+| Module | What it decides | Main API | Since |
+|---|---|---|---|
+| `identity` | Who the agent acts for. A `DelegationContext` from the server session (never the conversation) travels with every call; scopes can only be narrowed. | `DelegationContext`, `attenuate()` | unreleased |
+| `retrieval` | Retrieve as the user: the store itself enforces the user's tenant and hidden fields, so no filtering after retrieval. Failure is `RetrievalUnavailable`, never a broader credential. | `RetrieverPort`, `tenant_role_descriptor()`, `MemoryScopedRetriever` | unreleased |
+| `adapters.elastic` | A per-request Elasticsearch API key with document- and field-level security, invalidated after use. | `ElasticScopedRetriever` | unreleased |
+
 ### Models: which model may see this data?
 
 | Module | What it decides | Main API | Since |
@@ -152,6 +160,12 @@ Re-run `authorize()` on `check.proposal` before executing, because state can cha
   too. Fix XSS, and use step-up confirmation (passkey or out-of-band) for high-value actions.
 - An advisor's recall on a test set overstates its value against real attacks: successful attacks tend to look
   benign, such as an innocent-looking message that relies on forged conversation history.
+
+**Identity and retrieval**
+- A delegation context is only as trustworthy as the session that built it. Authenticate the user first.
+- Document- and field-level security needs an Elasticsearch licence that includes it (Platinum, Enterprise or the
+  trial). Without one, minting fails and retrieval fails closed: plan for that, don't work around it.
+- The minter is a standing credential. Limit it to reading the index and managing its own keys.
 
 **Models**
 - The gateway trusts the data class you pass. Derive it from what your code put in the prompt (the most
