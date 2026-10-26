@@ -96,10 +96,12 @@ from agentic_core.lifecycle import (
 )
 from agentic_core.manifests import (
     ManifestInvalid,
+    NotCanonical,
     PinnedTools,
     PinReport,
     ToolDescriptor,
     ToolManifest,
+    canonical_json,
     check_pins,
     pin,
     sign_manifest,
@@ -190,6 +192,7 @@ __all__ = [
     "ModelGateway",
     "ModelPort",
     "ModelUnavailable",
+    "NotCanonical",
     "NullAdvisor",
     "PendingApproval",
     "PinReport",
@@ -226,6 +229,7 @@ __all__ = [
     "audited_decisions",
     "audited_execution",
     "authorize",
+    "canonical_json",
     "cap_new_severity",
     "check_agent",
     "check_pins",
