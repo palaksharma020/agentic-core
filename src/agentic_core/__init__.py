@@ -30,6 +30,7 @@ from agentic_core.grounding import (
     VerifiedEvidence,
     validate_grounding,
 )
+from agentic_core.identity import DelegationContext, attenuate
 from agentic_core.leakage import (
     LeakFinding,
     LeakResult,
@@ -48,6 +49,12 @@ from agentic_core.models import (
     ModelPort,
     ModelUnavailable,
     ScriptedModel,
+)
+from agentic_core.retrieval import (
+    MemoryScopedRetriever,
+    RetrievalUnavailable,
+    RetrieverPort,
+    tenant_role_descriptor,
 )
 from agentic_core.severity import SEVERITIES, SeverityDecision, cap_new_severity, tighten_severity
 from agentic_core.sources import (
@@ -78,6 +85,7 @@ __all__ = [
     "DataClass",
     "DataClassNotAllowed",
     "Decision",
+    "DelegationContext",
     "DropReason",
     "DroppedClaim",
     "Evidence",
@@ -88,6 +96,7 @@ __all__ = [
     "KeptClaim",
     "LeakFinding",
     "LeakResult",
+    "MemoryScopedRetriever",
     "Message",
     "ModelGateway",
     "ModelPort",
@@ -96,6 +105,8 @@ __all__ = [
     "Principal",
     "ProtectedValue",
     "RejectedSource",
+    "RetrievalUnavailable",
+    "RetrieverPort",
     "ScriptedModel",
     "SeverityDecision",
     "SourceCheck",
@@ -105,6 +116,7 @@ __all__ = [
     "ValidationResult",
     "Verdict",
     "VerifiedEvidence",
+    "attenuate",
     "authorize",
     "cap_new_severity",
     "check_sources",
@@ -121,6 +133,7 @@ __all__ = [
     "scan_for_leaks",
     "sha256_text",
     "strip_action_commands",
+    "tenant_role_descriptor",
     "tighten_only",
     "tighten_severity",
     "validate_grounding",
