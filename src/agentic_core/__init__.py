@@ -31,6 +31,7 @@ from agentic_core.approvals import (
     Redemption,
     Reversibility,
     ToolAction,
+    TooManyPending,
     payload_hash,
 )
 from agentic_core.gateway import (
@@ -164,6 +165,7 @@ __all__ = [
     "SourcePolicy",
     "SourceRecord",
     "SourceRejection",
+    "TooManyPending",
     "ToolAction",
     "ToolGateway",
     "ValidationResult",

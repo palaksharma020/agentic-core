@@ -110,6 +110,8 @@ def check_agent(registry: RegistryPort, agent_id: str, tool: str) -> AgentCheck:
         record = registry.get(agent_id)
     except RegistryUnavailable:
         return AgentCheck(False, "agent registry unreachable: treated as suspended")
+    except ValueError:  # a stored manifest or status that no longer parses
+        return AgentCheck(False, f"agent {agent_id!r} has an invalid registry record")
     if record is None:
         return AgentCheck(False, f"agent {agent_id!r} is not registered")
     if record.status is not AgentStatus.ACTIVE:

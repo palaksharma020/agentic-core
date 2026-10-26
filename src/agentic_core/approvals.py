@@ -4,7 +4,9 @@
 Each tool call gets a reversibility tier. An IRREVERSIBLE action that reaches outside the user's tenant (an
 email to an outside address) is not run: it becomes a PendingApproval with a dry-run preview. The approval is
 bound to the SHA-256 of the exact payload (tool, arguments, user, tenant, agent), is single-use and expires
-(10 minutes by default). Execution re-checks everything, so an agent revoked after approval still can't act.
+(10 minutes by default). The caller that executes an approved action must re-check the registry and policy
+first (the capstone app does), so an agent revoked after approval still can't act. Show approvers the
+arguments themselves, not a stored summary: the hash covers the arguments.
 
     ActionGate.evaluate(...)          -> ALLOW | PREVIEW_AND_APPROVE
     ApprovalStorePort.create(...)     -> a pending approval, with its preview and payload hash
@@ -46,6 +48,10 @@ class ApprovalStatus(str, Enum):
 
 class ApprovalUnavailable(Exception):
     """The approval store can't be reached. The action stays pending; nothing is sent."""
+
+
+class TooManyPending(ApprovalUnavailable):
+    """The user already has the maximum number of approvals waiting (limits approval fatigue)."""
 
 
 def payload_hash(ctx: DelegationContext, tool: str, args: Mapping[str, Any]) -> str:
@@ -115,7 +121,7 @@ class ApprovalStorePort(Protocol):
 
     def get(self, approval_id: str) -> PendingApproval | None: ...
 
-    def list_pending(self, tenant: str | None = None) -> list[PendingApproval]: ...
+    def list_pending(self, tenant: str) -> list[PendingApproval]: ...
 
     def decide(self, approval_id: str, approver: str, approve: bool) -> PendingApproval: ...
 
@@ -153,12 +159,20 @@ def check_decision(a: PendingApproval | None, approver: str, now: float) -> Pend
 class MemoryApprovalStore:
     ttl_seconds: float = 600
     clock: Callable[[], float] = time.time
+    max_pending_per_user: int = 5
     items: dict[str, PendingApproval] = field(default_factory=dict)
 
     def create(
         self, ctx: DelegationContext, tool: str, args: Mapping[str, Any], preview: str
     ) -> PendingApproval:
         now = self.clock()
+        waiting = [
+            a
+            for a in self.items.values()
+            if a.user == ctx.user and a.status is ApprovalStatus.PENDING and a.expires_at >= now
+        ]
+        if len(waiting) >= self.max_pending_per_user:
+            raise TooManyPending(f"{ctx.user} already has {len(waiting)} approvals waiting")
         a = PendingApproval(
             approval_id=secrets.token_urlsafe(16),
             payload_hash=payload_hash(ctx, tool, args),
@@ -177,14 +191,12 @@ class MemoryApprovalStore:
     def get(self, approval_id: str) -> PendingApproval | None:
         return self.items.get(approval_id)
 
-    def list_pending(self, tenant: str | None = None) -> list[PendingApproval]:
+    def list_pending(self, tenant: str) -> list[PendingApproval]:
         now = self.clock()
         return [
             a
             for a in self.items.values()
-            if a.status is ApprovalStatus.PENDING
-            and a.expires_at >= now
-            and (tenant is None or a.tenant == tenant)
+            if a.status is ApprovalStatus.PENDING and a.expires_at >= now and a.tenant == tenant
         ]
 
     def decide(self, approval_id: str, approver: str, approve: bool) -> PendingApproval:

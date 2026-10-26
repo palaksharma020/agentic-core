@@ -7,7 +7,10 @@ Pass `connect`, a zero-argument callable returning a DB-API connection (for exam
 Concurrency is handled by the database, not by Python:
 - status changes lock the agent row (SELECT ... FOR UPDATE) and write an event in the same transaction;
 - approval decisions and redemptions are single conditional UPDATE ... RETURNING statements, so two
-  concurrent clicks can never both use one approval.
+  concurrent clicks can never both use one approval. Only the UPDATE can report success; a re-read only
+  explains a failure.
+- creating an approval checks the per-user pending cap in the same INSERT ... SELECT statement.
+Use least-privilege roles (see the app's db setup): the agent may create approvals but never update them.
 Any database error becomes RegistryUnavailable / ApprovalUnavailable (fail closed); programming errors surface.
 """
 
@@ -25,6 +28,7 @@ from agentic_core.approvals import (
     ApprovalUnavailable,
     PendingApproval,
     Redemption,
+    TooManyPending,
     check_decision,
     check_redemption,
     payload_hash,
@@ -69,10 +73,14 @@ CREATE TABLE IF NOT EXISTS approvals (
     preview      text NOT NULL,
     status       text NOT NULL CHECK (status IN ('pending', 'approved', 'denied', 'used')),
     decided_by   text,
+    executed_at  timestamptz,
+    outcome      text,
     created_at   timestamptz NOT NULL DEFAULT now(),
     expires_at   timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS approvals_pending ON approvals (tenant) WHERE status = 'pending';
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS executed_at timestamptz;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS outcome text;
 """
 
 
@@ -181,18 +189,24 @@ def _row_to_approval(row: tuple[Any, ...]) -> PendingApproval:
 
 
 class PostgresApprovalStore:
-    def __init__(self, connect: Callable[[], Any], ttl_seconds: float = 600) -> None:
+    def __init__(
+        self, connect: Callable[[], Any], ttl_seconds: float = 600, max_pending_per_user: int = 5
+    ) -> None:
         self.db = _Db(connect, ApprovalUnavailable)
         self.ttl = timedelta(seconds=ttl_seconds)
+        self.max_pending = max_pending_per_user
 
     def create(
         self, ctx: DelegationContext, tool: str, args: Mapping[str, Any], preview: str
     ) -> PendingApproval:
         now = datetime.now(timezone.utc)
         with self.db.tx() as cur:
+            # Insert only while the user is under the cap (approval-fatigue flooding, ASI09).
             cur.execute(
                 f"INSERT INTO approvals ({_COLUMNS}) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', NULL) "
+                "SELECT %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', NULL "
+                "WHERE (SELECT count(*) FROM approvals WHERE user_id = %s AND status = 'pending' "
+                "AND expires_at > now()) < %s "
                 f"RETURNING {_COLUMNS}",
                 (
                     secrets.token_urlsafe(16),
@@ -205,9 +219,14 @@ class PostgresApprovalStore:
                     preview,
                     now,
                     now + self.ttl,
+                    ctx.user,
+                    self.max_pending,
                 ),
             )
-            return _row_to_approval(cur.fetchone())
+            row = cur.fetchone()
+        if row is None:
+            raise TooManyPending(f"{ctx.user} already has {self.max_pending} approvals waiting")
+        return _row_to_approval(row)
 
     def get(self, approval_id: str) -> PendingApproval | None:
         with self.db.tx() as cur:
@@ -215,12 +234,12 @@ class PostgresApprovalStore:
             row = cur.fetchone()
         return _row_to_approval(row) if row else None
 
-    def list_pending(self, tenant: str | None = None) -> list[PendingApproval]:
+    def list_pending(self, tenant: str) -> list[PendingApproval]:
         with self.db.tx() as cur:
             cur.execute(
                 f"SELECT {_COLUMNS} FROM approvals WHERE status = 'pending' AND expires_at > now() "
-                "AND (%s::text IS NULL OR tenant = %s) ORDER BY created_at",
-                (tenant, tenant),
+                "AND tenant = %s ORDER BY created_at",
+                (tenant,),
             )
             rows = cur.fetchall()
         return [_row_to_approval(r) for r in rows]
@@ -239,6 +258,15 @@ class PostgresApprovalStore:
             raise ValueError("approval is no longer pending")  # lost a race with another decision
         return _row_to_approval(row)
 
+    def record_outcome(self, approval_id: str, outcome: str) -> None:
+        """What happened when the approved action ran (sent, or why not). Written once."""
+        with self.db.tx() as cur:
+            cur.execute(
+                "UPDATE approvals SET outcome = %s, executed_at = now() "
+                "WHERE approval_id = %s AND status = 'used' AND outcome IS NULL",
+                (outcome[:500], approval_id),
+            )
+
     def redeem(self, approval_id: str, expected_hash: str) -> Redemption:
         with self.db.tx() as cur:
             cur.execute(
@@ -249,7 +277,9 @@ class PostgresApprovalStore:
             row = cur.fetchone()
         if row is not None:
             return Redemption(True, "ok", _row_to_approval(row))
-        # Not redeemed: report why, using the same rules as every store.
-        return check_redemption(
+        # Not redeemed. The re-read only explains why; it can never turn a failure into success
+        # (the row may have changed since the UPDATE, or the app clock may disagree with the database).
+        why = check_redemption(
             self.get(approval_id), expected_hash, datetime.now(timezone.utc).timestamp()
         )
+        return why if not why.ok else Redemption(False, "not_approved_or_expired", why.approval)

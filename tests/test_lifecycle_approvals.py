@@ -14,6 +14,7 @@ from agentic_core import (
     Reversibility,
     ToolAction,
     ToolGateway,
+    TooManyPending,
     check_agent,
     payload_hash,
 )
@@ -152,4 +153,21 @@ def test_denied_and_expired_approvals_never_redeem():
     store.decide(late.approval_id, "lee", True)
     now[0] += 601
     assert store.redeem(late.approval_id, late.payload_hash).reason == "expired"
-    assert store.list_pending() == []
+    assert store.list_pending("acme") == []
+
+
+def test_pending_cap_limits_approval_flooding():
+    store = MemoryApprovalStore(max_pending_per_user=2)
+    store.create(DANA, "send_email", EMAIL, "p")
+    store.create(DANA, "send_email", EMAIL, "p")
+    with pytest.raises(TooManyPending):
+        store.create(DANA, "send_email", EMAIL, "p")
+
+
+def test_corrupt_registry_record_is_a_deny():
+    class Corrupt:
+        def get(self, agent_id):
+            raise ValueError("bad manifest")
+
+    check = check_agent(Corrupt(), "knowledge-assistant", "search_docs")
+    assert not check.ok and "invalid" in check.reason
