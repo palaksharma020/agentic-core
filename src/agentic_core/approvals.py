@@ -132,6 +132,10 @@ class ApprovalStorePort(Protocol):
 
     def redeem(self, approval_id: str, expected_hash: str) -> Redemption: ...
 
+    def record_outcome(self, approval_id: str, outcome: str) -> None:
+        """What happened after a redeemed approval was executed (sent, or why not)."""
+        ...
+
 
 def check_redemption(a: PendingApproval | None, expected_hash: str, now: float) -> Redemption:
     """Shared rules for every store: approved, unexpired, not used, and exactly the approved payload."""
@@ -166,6 +170,7 @@ class MemoryApprovalStore:
     clock: Callable[[], float] = time.time
     max_pending_per_user: int = 5
     items: dict[str, PendingApproval] = field(default_factory=dict)
+    outcomes: dict[str, str] = field(default_factory=dict)
 
     def create(
         self, ctx: DelegationContext, tool: str, args: Mapping[str, Any], preview: str
@@ -215,3 +220,8 @@ class MemoryApprovalStore:
         if r.ok and r.approval:
             self.items[approval_id] = replace(r.approval, status=ApprovalStatus.USED)
         return r
+
+    def record_outcome(self, approval_id: str, outcome: str) -> None:
+        if approval_id not in self.items:
+            raise KeyError(approval_id)
+        self.outcomes[approval_id] = outcome

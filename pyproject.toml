@@ -20,7 +20,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.14", "mypy>=1.18"]
+# Ed25519 signing for the audit trail and tool manifests (adapters.ed25519).
+crypto = ["cryptography>=46"]
+dev = ["pytest>=8", "ruff>=0.14", "mypy>=1.18", "cryptography>=46"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_core"]
