@@ -17,6 +17,7 @@ grounded evidence; see agentic_core.verdict.
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -134,8 +135,10 @@ def render_untrusted(chunks: Mapping[str, str], tag: str = "untrusted_source") -
     indirect prompt injection but does not prevent it; pair it with checks that do not rely on the model obeying.
     """
 
-    def defang(s: str) -> str:
-        return s.replace(f"</{tag}", f"&lt;/{tag}").replace(f"<{tag}", f"&lt;{tag}")
+    opener = re.compile(rf"<(\s*/?\s*{re.escape(tag)})", re.IGNORECASE)
+
+    def defang(s: str) -> str:  # any case, any spacing: "</UNTRUSTED_SOURCE", "< /untrusted_source"
+        return opener.sub(r"&lt;\1", s)
 
     return "\n\n".join(
         f'<{tag} id="{defang(sid).replace(chr(34), "")}">\n{defang(text)}\n</{tag}>'

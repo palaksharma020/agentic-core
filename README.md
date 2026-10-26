@@ -138,6 +138,14 @@ Re-run `authorize()` on `check.proposal` before executing, because state can cha
 | `approvals` | Irreversible actions to outside parties wait for a human approval bound to the SHA-256 of the exact payload: single-use, expiring, no self-approval, capped per user. | `ActionGate`, `payload_hash()`, `ApprovalStorePort` | unreleased |
 | `adapters.postgres` | Registry and approval store in Postgres; single use enforced by one atomic UPDATE. | `PostgresRegistry`, `PostgresApprovalStore` | unreleased |
 
+### Guardrails: classifiers, redaction, untrusted text
+
+| Module | What it decides | Main API | Since |
+|---|---|---|---|
+| `guards` | How guardrails plug in (tighten-only; an unavailable guard blocks), and a content shield for untrusted documents that removes hidden characters, defangs forged conversation turns and flags instruction-like text. | `GuardrailPort`, `tighten_all()`, `ContentShield` | unreleased |
+| `adapters.llama_guard` | Content-safety classification of questions and answers with Llama Guard 3 via Ollama. Not a prompt-injection detector. | `LlamaGuard` | unreleased |
+| `adapters.presidio` | Redaction of personal data with Microsoft Presidio, with your recognizers (for example an organisation's salary formats). | `PresidioRedactor` | unreleased |
+
 ### Models: which model may see this data?
 
 | Module | What it decides | Main API | Since |
@@ -183,6 +191,14 @@ Re-run `authorize()` on `check.proposal` before executing, because state can cha
 - An approval binds the arguments, not their meaning: show approvers the arguments themselves (the capstone
   page escapes hidden characters and flags outside domains), and keep tool schemas strict.
 - Whoever executes an approved action must re-check the registry and policy first.
+
+**Guardrails**
+- Measure before enforcing: run each guard in shadow mode on your own benign and harmful cases first. In the
+  capstone, Llama Guard 3 1B flagged 8% of benign employee questions (shadow) and 0% of benign answers (enforced).
+- The content shield is a heuristic. It raises the bar and taints the request for stricter handling; it does not
+  make injection impossible. Pair it with controls that don't depend on the model (policy, approval).
+- Redaction catches the formats you teach it. Keep sensitive fields out of the prompt (field-level security) and
+  treat redaction as the second line.
 
 **Models**
 - The gateway trusts the data class you pass. Derive it from what your code put in the prompt (the most

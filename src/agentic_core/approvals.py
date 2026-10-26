@@ -83,6 +83,11 @@ class ActionGate:
 
     actions: Mapping[str, ToolAction]
 
+    def reversibility(self, tool: str) -> Reversibility:
+        """The tool's tier; unknown tools are IRREVERSIBLE."""
+        action = self.actions.get(tool)
+        return action.reversibility if action else Reversibility.IRREVERSIBLE
+
     def evaluate(self, ctx: DelegationContext, tool: str, args: Mapping[str, Any]) -> GateDecision:
         action = self.actions.get(tool, ToolAction(Reversibility.IRREVERSIBLE, lambda c, a: True))
         if action.reversibility is Reversibility.IRREVERSIBLE and action.is_external(ctx, args):

@@ -51,6 +51,14 @@ from agentic_core.grounding import (
     VerifiedEvidence,
     validate_grounding,
 )
+from agentic_core.guards import (
+    ContentShield,
+    GuardrailPort,
+    GuardUnavailable,
+    GuardVerdict,
+    ShieldResult,
+    tighten_all,
+)
 from agentic_core.identity import DelegationContext, attenuate
 from agentic_core.leakage import (
     LeakFinding,
@@ -122,6 +130,7 @@ __all__ = [
     "AuthzResult",
     "Claim",
     "Completion",
+    "ContentShield",
     "DataClass",
     "DataClassNotAllowed",
     "Decision",
@@ -134,6 +143,9 @@ __all__ = [
     "Grant",
     "GrantCheck",
     "GrantIssuer",
+    "GuardUnavailable",
+    "GuardVerdict",
+    "GuardrailPort",
     "InjectionAdvisor",
     "InvalidTransition",
     "KeptClaim",
@@ -161,6 +173,7 @@ __all__ = [
     "Reversibility",
     "ScriptedModel",
     "SeverityDecision",
+    "ShieldResult",
     "SourceCheck",
     "SourcePolicy",
     "SourceRecord",
@@ -191,6 +204,7 @@ __all__ = [
     "sha256_text",
     "strip_action_commands",
     "tenant_role_descriptor",
+    "tighten_all",
     "tighten_only",
     "tighten_severity",
     "validate_args",

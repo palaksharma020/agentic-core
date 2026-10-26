@@ -171,3 +171,9 @@ def test_corrupt_registry_record_is_a_deny():
 
     check = check_agent(Corrupt(), "knowledge-assistant", "search_docs")
     assert not check.ok and "invalid" in check.reason
+
+
+def test_gate_reports_tiers_and_defaults_unknown_tools_to_irreversible():
+    assert GATE.reversibility("search_docs") is Reversibility.REVERSIBLE
+    assert GATE.reversibility("send_email") is Reversibility.IRREVERSIBLE
+    assert GATE.reversibility("format_disk") is Reversibility.IRREVERSIBLE
