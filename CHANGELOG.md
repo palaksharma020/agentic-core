@@ -6,6 +6,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `guards`: `GuardrailPort`, `tighten_all()` (an unavailable guard blocks), and `ContentShield`: hidden and bidi
+  characters removed (PDF/Windows artefacts don't count as suspicious), NFKC, forged role markers defanged
+  (markdown, bracket and chat-template forms, mid-line, look-alike letters), size cap, instruction-like text flagged.
+- `adapters.llama_guard.LlamaGuard`: Llama Guard 3 via Ollama, hazard categories S1-S14; any failure is
+  `GuardUnavailable`.
+- `adapters.presidio.PresidioRedactor`: redaction with caller-configured Presidio engines; findings name entity
+  types, never values; any failure is `RedactionUnavailable`.
+- `ActionGate.reversibility()`.
+
+### Fixed
+- `render_untrusted()` defangs the spotlight tag in any case and spacing (`</UNTRUSTED_SOURCE>`, `< /untrusted_source>`).
 - `gateway`: `ToolGateway` (context, lifecycle, registry, argument schema via `validate_args`, then a `PolicyEngine`;
   anything but an explicit allow is a deny) and `adapters.opa.OpaPolicyEngine` (no decision cache).
 - `lifecycle`: `AgentManifest`, `AgentStatus` (created, active, suspended, revoked; revoked is final), `RegistryPort`,
