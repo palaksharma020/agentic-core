@@ -6,6 +6,14 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `gateway`: `ToolGateway` (context, lifecycle, registry, argument schema via `validate_args`, then a `PolicyEngine`;
+  anything but an explicit allow is a deny) and `adapters.opa.OpaPolicyEngine` (no decision cache).
+- `lifecycle`: `AgentManifest`, `AgentStatus` (created, active, suspended, revoked; revoked is final), `RegistryPort`,
+  `check_agent()` asked on every call (unreachable or corrupt registry means deny), `MemoryRegistry`.
+- `approvals`: `Reversibility`, `ActionGate`, exact-payload `payload_hash()`, `ApprovalStorePort` with single-use,
+  expiring approvals, no self-approval and a per-user pending cap (`TooManyPending`); `MemoryApprovalStore`.
+- `adapters.postgres`: `PostgresRegistry` (row-locked status changes with an event log) and `PostgresApprovalStore`
+  (atomic conditional UPDATE for decide and redeem; only the UPDATE can report success; outcome recording).
 - `identity`: `DelegationContext` (user, tenant, agent, scopes; built from the server session) with an RFC 8693-style
   `act_claim()`, and `attenuate()`, which only ever narrows scopes.
 - `retrieval`: `RetrieverPort`, `tenant_role_descriptor()` (document-level security as a tenant query, field-level

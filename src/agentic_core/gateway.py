@@ -3,9 +3,12 @@
 
 ToolGateway.check(ctx, tool, args) runs, in order:
     1. a delegation context is present           (no context, no call)
-    2. the tool is registered                    (unknown tools are denied)
-    3. the arguments match the tool's schema     (a small JSON-Schema subset, see validate_args)
-    4. the policy engine allows it               (a PolicyEngine: OPA in production; any error is a deny)
+    2. the agent is active and the tool is in its manifest   (lifecycle registry, asked every call)
+    3. the tool is registered                    (unknown tools are denied)
+    4. the arguments match the tool's schema     (a small JSON-Schema subset, see validate_args)
+    5. the policy engine allows it               (a PolicyEngine: OPA in production; any error is a deny)
+`approved=True` tells the policy a human approved this exact payload (see approvals); only the server sets it,
+after redeeming the approval, never the model.
 The model never decides any of these. The gateway is the policy enforcement point (PEP); the policy engine
 is the decision point (PDP), so policy can change without changing code.
 """
@@ -18,13 +21,14 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
 from agentic_core.identity import DelegationContext
+from agentic_core.lifecycle import RegistryPort, check_agent
 
 
 @dataclass(frozen=True)
 class GatewayDecision:
     allowed: bool
     reasons: tuple[str, ...] = ()
-    stage: str = ""  # context | registry | schema | policy | allowed
+    stage: str = ""  # context | lifecycle | registry | schema | policy | allowed
 
 
 class PolicyUnavailable(Exception):
@@ -83,20 +87,30 @@ def validate_args(schema: Mapping[str, Any], args: Mapping[str, Any]) -> list[st
 class ToolGateway:
     schemas: Mapping[str, Mapping[str, Any]]
     policy: PolicyEngine
+    registry: RegistryPort | None = None
     decisions: list[GatewayDecision] = field(default_factory=list)
 
     def check(
-        self, ctx: DelegationContext | None, tool: str, args: Mapping[str, Any]
+        self,
+        ctx: DelegationContext | None,
+        tool: str,
+        args: Mapping[str, Any],
+        *,
+        approved: bool = False,
     ) -> GatewayDecision:
-        decision = self._check(ctx, tool, args)
+        decision = self._check(ctx, tool, args, approved)
         self.decisions.append(decision)
         return decision
 
     def _check(
-        self, ctx: DelegationContext | None, tool: str, args: Mapping[str, Any]
+        self, ctx: DelegationContext | None, tool: str, args: Mapping[str, Any], approved: bool
     ) -> GatewayDecision:
         if ctx is None:
             return GatewayDecision(False, ("no delegation context",), "context")
+        if self.registry is not None:
+            agent = check_agent(self.registry, ctx.agent_id, tool)
+            if not agent.ok:
+                return GatewayDecision(False, (agent.reason,), "lifecycle")
         schema = self.schemas.get(tool)
         if schema is None:
             return GatewayDecision(False, (f"unknown tool {tool!r}",), "registry")
@@ -112,6 +126,7 @@ class ToolGateway:
             "scopes": sorted(ctx.scopes),
             "tool": tool,
             "args": dict(args),
+            "approved": approved is True,
         }
         try:
             allowed, reasons = self.policy.decide(policy_input)
