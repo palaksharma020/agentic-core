@@ -20,6 +20,13 @@ from agentic_core.actions import (
     strip_action_commands,
 )
 from agentic_core.advisor import AdvisorScore, InjectionAdvisor, NullAdvisor, tighten_only
+from agentic_core.gateway import (
+    GatewayDecision,
+    PolicyEngine,
+    PolicyUnavailable,
+    ToolGateway,
+    validate_args,
+)
 from agentic_core.grounding import (
     Claim,
     DroppedClaim,
@@ -30,6 +37,7 @@ from agentic_core.grounding import (
     VerifiedEvidence,
     validate_grounding,
 )
+from agentic_core.identity import DelegationContext, attenuate
 from agentic_core.leakage import (
     LeakFinding,
     LeakResult,
@@ -48,6 +56,12 @@ from agentic_core.models import (
     ModelPort,
     ModelUnavailable,
     ScriptedModel,
+)
+from agentic_core.retrieval import (
+    MemoryScopedRetriever,
+    RetrievalUnavailable,
+    RetrieverPort,
+    tenant_role_descriptor,
 )
 from agentic_core.severity import SEVERITIES, SeverityDecision, cap_new_severity, tighten_severity
 from agentic_core.sources import (
@@ -78,9 +92,11 @@ __all__ = [
     "DataClass",
     "DataClassNotAllowed",
     "Decision",
+    "DelegationContext",
     "DropReason",
     "DroppedClaim",
     "Evidence",
+    "GatewayDecision",
     "Grant",
     "GrantCheck",
     "GrantIssuer",
@@ -88,23 +104,30 @@ __all__ = [
     "KeptClaim",
     "LeakFinding",
     "LeakResult",
+    "MemoryScopedRetriever",
     "Message",
     "ModelGateway",
     "ModelPort",
     "ModelUnavailable",
     "NullAdvisor",
+    "PolicyEngine",
+    "PolicyUnavailable",
     "Principal",
     "ProtectedValue",
     "RejectedSource",
+    "RetrievalUnavailable",
+    "RetrieverPort",
     "ScriptedModel",
     "SeverityDecision",
     "SourceCheck",
     "SourcePolicy",
     "SourceRecord",
     "SourceRejection",
+    "ToolGateway",
     "ValidationResult",
     "Verdict",
     "VerifiedEvidence",
+    "attenuate",
     "authorize",
     "cap_new_severity",
     "check_sources",
@@ -121,7 +144,9 @@ __all__ = [
     "scan_for_leaks",
     "sha256_text",
     "strip_action_commands",
+    "tenant_role_descriptor",
     "tighten_only",
     "tighten_severity",
+    "validate_args",
     "validate_grounding",
 ]
