@@ -3,8 +3,9 @@
 
 An agent never acts as itself. Each request carries a DelegationContext built by the server from the
 authenticated session (never from the conversation): the user, their tenant, the agent, and the scopes the
-agent may use for this user. Downstream checks (retrieval, tool policy, audit) read it; a call without one is
-denied. The act claim follows the shape of OAuth token exchange (RFC 8693): subject = user, actor = agent.
+agent may use for this user. Downstream checks read it: retrieval scopes its credential to it, and the tool
+gateway (gateway.ToolGateway) denies any call that arrives without one. The context is only as trustworthy
+as the session that built it. The act claim follows the shape of OAuth token exchange (RFC 8693): subject = user, actor = agent.
 """
 
 from __future__ import annotations
