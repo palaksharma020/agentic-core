@@ -20,6 +20,13 @@ from agentic_core.actions import (
     strip_action_commands,
 )
 from agentic_core.advisor import AdvisorScore, InjectionAdvisor, NullAdvisor, tighten_only
+from agentic_core.gateway import (
+    GatewayDecision,
+    PolicyEngine,
+    PolicyUnavailable,
+    ToolGateway,
+    validate_args,
+)
 from agentic_core.grounding import (
     Claim,
     DroppedClaim,
@@ -89,6 +96,7 @@ __all__ = [
     "DropReason",
     "DroppedClaim",
     "Evidence",
+    "GatewayDecision",
     "Grant",
     "GrantCheck",
     "GrantIssuer",
@@ -102,6 +110,8 @@ __all__ = [
     "ModelPort",
     "ModelUnavailable",
     "NullAdvisor",
+    "PolicyEngine",
+    "PolicyUnavailable",
     "Principal",
     "ProtectedValue",
     "RejectedSource",
@@ -113,6 +123,7 @@ __all__ = [
     "SourcePolicy",
     "SourceRecord",
     "SourceRejection",
+    "ToolGateway",
     "ValidationResult",
     "Verdict",
     "VerifiedEvidence",
@@ -136,5 +147,6 @@ __all__ = [
     "tenant_role_descriptor",
     "tighten_only",
     "tighten_severity",
+    "validate_args",
     "validate_grounding",
 ]

@@ -103,3 +103,27 @@ def test_no_read_scope_is_refused_before_minting():
     with pytest.raises(PermissionError):
         r.search(DelegationContext("dana", "acme", "knowledge-assistant", set()), "hotel")
     assert minter.security.created == []
+
+
+def test_document_cannot_spoof_its_id():
+    class Spoof(FakeScoped):
+        def search(self, **kw):
+            return {
+                "hits": {"hits": [{"_id": "a1", "_source": {"tenant": "acme", "doc_id": "g1"}}]}
+            }
+
+    minter = FakeMinter()
+    r = ElasticScopedRetriever(minter, Spoof, index="kb-docs")
+    assert r.search(DANA, "x")[0]["doc_id"] == "a1"
+
+
+def test_failed_invalidation_is_logged_by_id_never_by_secret(caplog):
+    class NoInvalidate(FakeSecurity):
+        def invalidate_api_key(self, ids, owner=False):
+            raise ConnectionError("down")
+
+    minter = FakeMinter()
+    minter.security = NoInvalidate()
+    r = ElasticScopedRetriever(minter, lambda enc: FakeScoped(enc), index="kb-docs")
+    r.search(DANA, "x")
+    assert "key1" in caplog.text and "enc1" not in caplog.text

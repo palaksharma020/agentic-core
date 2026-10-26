@@ -17,7 +17,7 @@ Requires a licence with document- and field-level security (Platinum, Enterprise
 
 from __future__ import annotations
 
-import contextlib
+import logging
 import secrets
 from collections.abc import Callable, Iterable
 from typing import Any
@@ -25,6 +25,7 @@ from typing import Any
 from agentic_core.identity import DelegationContext
 from agentic_core.retrieval import RetrievalUnavailable, tenant_role_descriptor
 
+log = logging.getLogger(__name__)
 _BUGS = (TypeError, AttributeError)  # programming errors surface; everything else fails closed
 
 
@@ -70,8 +71,15 @@ class ElasticScopedRetriever:
         except Exception as exc:
             raise RetrievalUnavailable(f"scoped query failed: {type(exc).__name__}") from exc
         finally:
-            with contextlib.suppress(Exception):  # the key expires after ttl regardless
+            try:
                 self.minter.security.invalidate_api_key(ids=[key["id"]], owner=True)
+            except Exception as exc:  # the key still expires after ttl; say so, by id only
+                log.warning(
+                    "could not invalidate API key %s (%s); it expires after %s",
+                    key["id"],
+                    type(exc).__name__,
+                    self.ttl,
+                )
 
     def search(self, ctx: DelegationContext, query: str, size: int = 5) -> list[dict[str, Any]]:
         def op(es: Any) -> list[dict[str, Any]]:
@@ -80,7 +88,8 @@ class ElasticScopedRetriever:
                 query={"multi_match": {"query": query, "fields": ["title^2", "body"]}},
                 size=size,
             )
-            return [{"doc_id": h["_id"], **h["_source"]} for h in res["hits"]["hits"]]
+            # the stored _id wins over any doc_id field inside the document
+            return [{**h["_source"], "doc_id": h["_id"]} for h in res["hits"]["hits"]]
 
         result: list[dict[str, Any]] = self._run(ctx, op)
         return result
@@ -88,7 +97,7 @@ class ElasticScopedRetriever:
     def read(self, ctx: DelegationContext, doc_id: str) -> dict[str, Any] | None:
         def op(es: Any) -> dict[str, Any] | None:
             res = es.options(ignore_status=404).get(index=self.index, id=doc_id)
-            return {"doc_id": doc_id, **res["_source"]} if res.get("found") else None
+            return {**res["_source"], "doc_id": doc_id} if res.get("found") else None
 
         result: dict[str, Any] | None = self._run(ctx, op)
         return result
