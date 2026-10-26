@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import time
-import urllib.error
 import urllib.request
 from collections.abc import Sequence
 from urllib.parse import urlparse
@@ -75,10 +74,11 @@ class LlamaGuard:
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
                 data = json.loads(resp.read())
-        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        except Exception as exc:  # network, HTTP protocol, JSON: any failure means "no verdict"
             raise GuardUnavailable(f"{self.name}: {type(exc).__name__}") from exc
         self.last_latency_s = time.perf_counter() - start
-        reply = data.get("message", {}).get("content") if isinstance(data, dict) else None
+        message = data.get("message") if isinstance(data, dict) else None
+        reply = message.get("content") if isinstance(message, dict) else None
         if not isinstance(reply, str):
             raise GuardUnavailable(f"{self.name}: no verdict in reply")
         lines = [ln.strip() for ln in reply.strip().splitlines() if ln.strip()]
