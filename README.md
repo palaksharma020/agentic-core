@@ -128,6 +128,16 @@ Re-run `authorize()` on `check.proposal` before executing, because state can cha
 | `retrieval` | Retrieve as the user: the store itself enforces the user's tenant and hidden fields, so no filtering after retrieval. Failure is `RetrievalUnavailable`, never a broader credential. | `RetrieverPort`, `tenant_role_descriptor()`, `MemoryScopedRetriever` | unreleased |
 | `adapters.elastic` | A per-request Elasticsearch API key with document- and field-level security, invalidated after use. | `ElasticScopedRetriever` | unreleased |
 
+### Tools and actions: may the agent do this, now?
+
+| Module | What it decides | Main API | Since |
+|---|---|---|---|
+| `gateway` | Every tool call the model proposes, in code: delegation context, agent lifecycle, registered tool, argument schema, then a policy engine. Anything but an explicit allow is a deny, including the policy engine being down. | `ToolGateway`, `validate_args()`, `PolicyEngine` | unreleased |
+| `adapters.opa` | Open Policy Agent as the policy decision point (data API, standard library only, no decision cache). | `OpaPolicyEngine` | unreleased |
+| `lifecycle` | Is this agent active, and is the tool in its manifest? Asked on every call, so a revoke takes effect on the next one. Revoked is final. | `AgentManifest`, `check_agent()`, `RegistryPort` | unreleased |
+| `approvals` | Irreversible actions to outside parties wait for a human approval bound to the SHA-256 of the exact payload: single-use, expiring, no self-approval, capped per user. | `ActionGate`, `payload_hash()`, `ApprovalStorePort` | unreleased |
+| `adapters.postgres` | Registry and approval store in Postgres; single use enforced by one atomic UPDATE. | `PostgresRegistry`, `PostgresApprovalStore` | unreleased |
+
 ### Models: which model may see this data?
 
 | Module | What it decides | Main API | Since |
@@ -166,6 +176,13 @@ Re-run `authorize()` on `check.proposal` before executing, because state can cha
 - Document- and field-level security needs an Elasticsearch licence that includes it (Platinum, Enterprise or the
   trial). Without one, minting fails and retrieval fails closed: plan for that, don't work around it.
 - The minter is a standing credential. Limit it to reading the index and managing its own keys.
+
+**Tools and actions**
+- The gateway trusts the context and the registry it is given. Build the context from an authenticated session,
+  and give the agent's process a database role that can create approvals but never update them.
+- An approval binds the arguments, not their meaning: show approvers the arguments themselves (the capstone
+  page escapes hidden characters and flags outside domains), and keep tool schemas strict.
+- Whoever executes an approved action must re-check the registry and policy first.
 
 **Models**
 - The gateway trusts the data class you pass. Derive it from what your code put in the prompt (the most
