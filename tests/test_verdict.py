@@ -66,3 +66,13 @@ def test_flags_can_only_downgrade():
     weak = decide(g, gate(shown, needed=2), flags=["verified", "nonsense"])
     assert weak.verdict is Verdict.SUPPORTED
     assert downgrade_only(Verdict.REFUSED, Verdict.VERIFIED) is Verdict.REFUSED
+
+
+def test_reasons_never_carry_claim_text():
+    secret = "Lee earns 243000 TF-canary"
+    dropped = validate_grounding(
+        [Claim(secret, [Evidence("a", "nowhere to be found")])], {"a": "text"}
+    )
+    d = decide(dropped, gate({"a": "text"}))
+    assert all(secret not in r and "243000" not in r for r in d.reasons)
+    assert any(r.startswith("claim removed: #1 (") for r in d.reasons)
