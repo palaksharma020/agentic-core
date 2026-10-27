@@ -54,7 +54,10 @@ def decide(
         f"source rejected: {r.source_id} ({r.reason.value}: {r.detail})" for r in sources.rejected
     ]
     reasons += [
-        f"claim removed: {d.claim.text[:80]!r} ({d.reason.value})" for d in grounding.dropped
+        # By position and reason only: claim text is model output (it may carry a canary, personal data or
+        # an injected instruction), and reasons end up in logs and audit records.
+        f"claim removed: #{d.claim.id or i} ({d.reason.value})"
+        for i, d in enumerate(grounding.dropped, start=1)
     ]
 
     if not sources.ok:
